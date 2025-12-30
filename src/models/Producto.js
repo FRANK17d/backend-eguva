@@ -1,36 +1,36 @@
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/db');
 
-const Product = sequelize.define('Product', {
-    name: {
+const Producto = sequelize.define('Producto', {
+    nombre: {
         type: DataTypes.STRING,
         allowNull: false
     },
-    category: {
+    categoria: {
         type: DataTypes.STRING,
         allowNull: false
     },
-    price: {
+    precio: {
         type: DataTypes.DECIMAL(10, 2),
         allowNull: false
     },
-    image: {
+    imagen: {
         type: DataTypes.STRING,
         allowNull: true
     },
-    description: {
+    descripcion: {
         type: DataTypes.TEXT,
         allowNull: true
     },
-    condition: {
+    condicion: {
         type: DataTypes.STRING,
         allowNull: true
     },
-    brand: {
+    marca: {
         type: DataTypes.STRING,
         allowNull: true
     },
-    size: {
+    talla: {
         type: DataTypes.STRING,
         allowNull: true
     },
@@ -39,7 +39,8 @@ const Product = sequelize.define('Product', {
         defaultValue: 1
     }
 }, {
-    timestamps: true
+    timestamps: true,
+    tableName: 'productos'
 });
 
-module.exports = Product;
+module.exports = Producto;

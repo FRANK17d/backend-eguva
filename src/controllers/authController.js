@@ -2,8 +2,8 @@ const authService = require('../services/authService');
 
 const login = async (req, res) => {
     try {
-        const { email, password } = req.body;
-        const result = await authService.login(email, password);
+        const { correo, contrasena } = req.body;
+        const result = await authService.login(correo, contrasena);
 
         if (!result) {
             return res.status(401).json({ message: 'Credenciales inválidas' });

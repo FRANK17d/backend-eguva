@@ -1,25 +1,25 @@
-const Product = require('../models/Product');
+const Producto = require('../models/Producto');
 
 const getAllProducts = async () => {
-    return await Product.findAll();
+    return await Producto.findAll();
 };
 
 const getProductById = async (id) => {
-    return await Product.findByPk(id);
+    return await Producto.findByPk(id);
 };
 
 const createProduct = async (productData) => {
-    return await Product.create(productData);
+    return await Producto.create(productData);
 };
 
 const updateProduct = async (id, productData) => {
-    const product = await Product.findByPk(id);
+    const product = await Producto.findByPk(id);
     if (!product) return null;
     return await product.update(productData);
 };
 
 const deleteProduct = async (id) => {
-    const product = await Product.findByPk(id);
+    const product = await Producto.findByPk(id);
     if (!product) return null;
     await product.destroy();
     return true;
