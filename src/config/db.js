@@ -20,9 +20,10 @@ const connectDB = async () => {
 
         // Sincronización basada en el entorno
         if (process.env.NODE_ENV === 'production') {
-            // En producción: solo verifica sin modificar estructura
-            await sequelize.sync();
-            console.log('Modelos sincronizados (producción - sin cambios).');
+            // TEMPORAL: alter:true para agregar nuevas columnas (resetPasswordToken, resetPasswordExpires)
+            // TODO: Revertir a sync() sin alter después del primer deploy exitoso
+            await sequelize.sync({ alter: true });
+            console.log('Modelos sincronizados (producción - ALTER MODE TEMPORAL).');
         } else {
             // En desarrollo: permite modificar estructura
             await sequelize.sync({ alter: true });
