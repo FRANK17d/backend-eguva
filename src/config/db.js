@@ -21,17 +21,18 @@ const connectDB = async () => {
         // Sincronización basada en el entorno
         if (process.env.NODE_ENV === 'production') {
             await sequelize.sync({ alter: false });
-            console.log('Modelos sincronizados (producción).');
         } else {
             await sequelize.sync({ alter: false });
-
-            // Fix manual para columnas faltantes si alter:true falla (MySQL standard no soporta ADD COLUMN IF NOT EXISTS)
-            try { await sequelize.query("ALTER TABLE pedidos ADD COLUMN mercadopago_preference_id VARCHAR(255) NULL;"); } catch (e) { }
-            try { await sequelize.query("ALTER TABLE pedidos ADD COLUMN subtotal DECIMAL(10,2) NOT NULL DEFAULT 0.00;"); } catch (e) { }
-            try { await sequelize.query("ALTER TABLE pedidos ADD COLUMN costoEnvio DECIMAL(10,2) NOT NULL DEFAULT 0.00;"); } catch (e) { }
-
-            console.log('Modelos sincronizados (desarrollo).');
         }
+
+        // Fix manual para columnas faltantes (Funciona en Dev y Producción)
+        // Intentamos agregar las columnas una por una. Si ya existen, el catch ignorará el error.
+        try { await sequelize.query("ALTER TABLE pedidos ADD COLUMN mercadopago_preference_id VARCHAR(255) NULL;"); } catch (e) { }
+        try { await sequelize.query("ALTER TABLE pedidos ADD COLUMN subtotal DECIMAL(10,2) NOT NULL DEFAULT 0.00;"); } catch (e) { }
+        try { await sequelize.query("ALTER TABLE pedidos ADD COLUMN costoEnvio DECIMAL(10,2) NOT NULL DEFAULT 0.00;"); } catch (e) { }
+        try { await sequelize.query("ALTER TABLE pedidos ADD COLUMN paymentId VARCHAR(255) NULL;"); } catch (e) { }
+
+        console.log('Modelos sincronizados y columnas verificadas.');
     } catch (error) {
         console.error('No se pudo conectar a la base de datos:', error.message);
 
