@@ -55,6 +55,10 @@ const Pedido = sequelize.define('Pedido', {
     paymentId: {
         type: DataTypes.STRING,
         allowNull: true
+    },
+    mercadopago_preference_id: {
+        type: DataTypes.STRING,
+        allowNull: true
     }
 }, {
     tableName: 'pedidos',

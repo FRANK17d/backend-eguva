@@ -20,14 +20,17 @@ const connectDB = async () => {
 
         // Sincronización basada en el entorno
         if (process.env.NODE_ENV === 'production') {
-            // TEMPORAL: alter:true para agregar nuevas columnas (resetPasswordToken, resetPasswordExpires)
-            // TODO: Revertir a sync() sin alter después del primer deploy exitoso
-            await sequelize.sync({ alter: true });
-            console.log('Modelos sincronizados (producción - ALTER MODE TEMPORAL).');
+            await sequelize.sync({ alter: false });
+            console.log('Modelos sincronizados (producción).');
         } else {
-            // En desarrollo: permite modificar estructura
-            await sequelize.sync({ alter: true });
-            console.log('Modelos sincronizados (desarrollo - alter mode).');
+            await sequelize.sync({ alter: false });
+
+            // Fix manual para columnas faltantes si alter:true falla (MySQL standard no soporta ADD COLUMN IF NOT EXISTS)
+            try { await sequelize.query("ALTER TABLE pedidos ADD COLUMN mercadopago_preference_id VARCHAR(255) NULL;"); } catch (e) { }
+            try { await sequelize.query("ALTER TABLE pedidos ADD COLUMN subtotal DECIMAL(10,2) NOT NULL DEFAULT 0.00;"); } catch (e) { }
+            try { await sequelize.query("ALTER TABLE pedidos ADD COLUMN costoEnvio DECIMAL(10,2) NOT NULL DEFAULT 0.00;"); } catch (e) { }
+
+            console.log('Modelos sincronizados (desarrollo).');
         }
     } catch (error) {
         console.error('No se pudo conectar a la base de datos:', error.message);
