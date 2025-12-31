@@ -73,6 +73,58 @@ exports.createPreference = async (req, res) => {
     }
 };
 
+exports.processPayment = async (req, res) => {
+    try {
+        const { payment, pedidoId } = req.body;
+        const { Payment } = require('mercadopago');
+        const paymentClient = new Payment(client);
+
+        const pedido = await Pedido.findByPk(pedidoId);
+        if (!pedido) {
+            return res.status(404).json({ mensaje: 'Pedido no encontrado' });
+        }
+
+        const body = {
+            transaction_amount: payment.transaction_amount,
+            token: payment.token,
+            description: `Pedido #${pedido.id} - Eguva`,
+            installments: payment.installments,
+            payment_method_id: payment.payment_method_id,
+            issuer_id: payment.issuer_id,
+            payer: {
+                email: payment.payer.email,
+                identification: payment.payer.identification,
+            },
+            external_reference: pedido.id.toString(),
+            notification_url: `${process.env.BACKEND_URL}/api/payments/webhook`,
+        };
+
+        // Si es Yape, añadir campos específicos si son necesarios (Mercado Pago SDK los maneja por el token/payment_method_id)
+
+        const response = await paymentClient.create({ body });
+
+        // Actualizar pedido según el estado del pago
+        if (response.status === 'approved') {
+            pedido.estado = 'Pagado';
+            pedido.paymentId = response.id.toString();
+            await pedido.save();
+        }
+
+        res.json({
+            status: response.status,
+            status_detail: response.status_detail,
+            id: response.id
+        });
+
+    } catch (error) {
+        console.error('Error al procesar pago con Checkout API:', error);
+        res.status(500).json({
+            mensaje: 'Error al procesar el pago',
+            error: error.message
+        });
+    }
+};
+
 exports.webhook = async (req, res) => {
     // Aquí recibiremos la notificación de Mercado Pago cuando el pago se complete
     const { query } = req;
