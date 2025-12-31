@@ -14,7 +14,8 @@ app.use(passport.initialize());
 // Rutas
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/users', require('./routes/userRoutes'));
-app.use('/api/products', require('./routes/productRoutes'));
+app.use('/api/categorias', require('./routes/categoriaRoutes'));
+app.use('/api/productos', require('./routes/productoRoutes'));
 
 // Ruta básica
 app.get('/', (req, res) => {
