@@ -137,7 +137,8 @@ exports.processPayment = async (req, res) => {
         res.json({
             status: response.status,
             status_detail: response.status_detail,
-            id: response.id
+            id: response.id,
+            mensaje: response.status === 'rejected' ? 'El pago fue rechazado. Por favor, verifica los datos o intenta con otro medio.' : null
         });
 
     } catch (error) {
