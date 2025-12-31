@@ -53,8 +53,12 @@ exports.createPreference = async (req, res) => {
             },
             auto_return: 'approved',
             external_reference: pedido.id.toString(),
-            notification_url: `${process.env.BACKEND_URL}/api/payments/webhook`,
         };
+
+        // Solo enviar notification_url si es una URL pública válida (no localhost)
+        if (process.env.BACKEND_URL && !process.env.BACKEND_URL.includes('localhost')) {
+            body.notification_url = `${process.env.BACKEND_URL}/api/payments/webhook`;
+        }
 
         const response = await preference.create({ body });
 
@@ -96,18 +100,40 @@ exports.processPayment = async (req, res) => {
                 identification: payment.payer.identification,
             },
             external_reference: pedido.id.toString(),
-            notification_url: `${process.env.BACKEND_URL}/api/payments/webhook`,
         };
+
+        // Solo enviar notification_url si es una URL pública válida (no localhost)
+        if (process.env.BACKEND_URL && !process.env.BACKEND_URL.includes('localhost')) {
+            body.notification_url = `${process.env.BACKEND_URL}/api/payments/webhook`;
+        }
 
         // Si es Yape, añadir campos específicos si son necesarios (Mercado Pago SDK los maneja por el token/payment_method_id)
 
         const response = await paymentClient.create({ body });
 
-        // Actualizar pedido según el estado del pago
+        // Actualizar pedido y DESCONTAR STOCK según el estado del pago
         if (response.status === 'approved') {
-            pedido.estado = 'Pagado';
-            pedido.paymentId = response.id.toString();
-            await pedido.save();
+            const pedidoActualizar = await Pedido.findByPk(pedidoId, {
+                include: [{
+                    model: require('../models/DetallePedido'),
+                    as: 'detalles'
+                }]
+            });
+
+            if (pedidoActualizar && pedidoActualizar.estado !== 'Pagado') {
+                // Descontar stock ahora que el pago es real
+                for (const detalle of pedidoActualizar.detalles) {
+                    const producto = await Producto.findByPk(detalle.productoId);
+                    if (producto) {
+                        producto.stock = Math.max(0, producto.stock - detalle.cantidad);
+                        await producto.save();
+                    }
+                }
+
+                pedidoActualizar.estado = 'Pagado';
+                pedidoActualizar.paymentId = response.id.toString();
+                await pedidoActualizar.save();
+            }
         }
 
         res.json({

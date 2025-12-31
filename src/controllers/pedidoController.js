@@ -34,9 +34,8 @@ const crearPedido = async (req, res) => {
                 precio: producto.precio
             });
 
-            // Descontar stock
-            producto.stock -= item.cantidad;
-            await producto.save({ transaction: t });
+            // ELIMINADO: El stock ya no se descuenta aquí al crear el pedido 'Pendiente'
+            // Se descontará en processPayment o webhook cuando se confirme el pago.
         }
 
         // Obtener configuración de envío
