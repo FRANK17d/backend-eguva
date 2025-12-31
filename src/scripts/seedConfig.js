@@ -15,7 +15,7 @@ const seedConfig = async () => {
             },
             {
                 clave: 'free_shipping_threshold',
-                valor: '70.00',
+                valor: '45.00',
                 tipo: 'number',
                 descripcion: 'Monto mínimo para envío gratuito'
             }
