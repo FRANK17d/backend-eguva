@@ -16,6 +16,7 @@ app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/categorias', require('./routes/categoriaRoutes'));
 app.use('/api/productos', require('./routes/productoRoutes'));
+app.use('/api/boletin', require('./routes/boletinRoutes'));
 
 // Ruta básica
 app.get('/', (req, res) => {
