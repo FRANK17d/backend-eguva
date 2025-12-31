@@ -88,19 +88,26 @@ exports.processPayment = async (req, res) => {
             return res.status(404).json({ mensaje: 'Pedido no encontrado' });
         }
 
+        // Construir body según el método de pago (Yape tiene estructura diferente)
+        const isYape = payment.payment_method_id === 'yape';
+
         const body = {
             transaction_amount: payment.transaction_amount,
             token: payment.token,
             description: `Pedido #${pedido.id} - Eguva`,
-            installments: payment.installments,
+            installments: payment.installments || 1,
             payment_method_id: payment.payment_method_id,
-            issuer_id: payment.issuer_id,
             payer: {
                 email: payment.payer.email,
-                identification: payment.payer.identification,
             },
             external_reference: pedido.id.toString(),
         };
+
+        // Solo añadir issuer_id e identification si NO es Yape (Yape no los necesita)
+        if (!isYape) {
+            if (payment.issuer_id) body.issuer_id = payment.issuer_id;
+            if (payment.payer.identification) body.payer.identification = payment.payer.identification;
+        }
 
         const backendUrl = (process.env.BACKEND_URL || '').trim().replace(/\/$/, '');
         if (backendUrl.startsWith('http') && !backendUrl.includes('localhost')) {
