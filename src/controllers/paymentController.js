@@ -91,8 +91,18 @@ exports.processPayment = async (req, res) => {
         // Construir body según el método de pago (Yape tiene estructura diferente)
         const isYape = payment.payment_method_id === 'yape';
 
+        // Asegurar que el monto sea un número válido con máximo 2 decimales
+        const amount = parseFloat(Number(payment.transaction_amount).toFixed(2));
+
+        if (isNaN(amount) || amount <= 0) {
+            return res.status(400).json({
+                mensaje: 'Monto inválido',
+                detalles: 'El monto debe ser mayor a 0'
+            });
+        }
+
         const body = {
-            transaction_amount: payment.transaction_amount,
+            transaction_amount: amount,
             token: payment.token,
             description: `Pedido #${pedido.id} - Eguva`,
             installments: payment.installments || 1,
