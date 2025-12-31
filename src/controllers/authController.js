@@ -24,7 +24,30 @@ const register = async (req, res) => {
     }
 };
 
+const requestPasswordReset = async (req, res) => {
+    try {
+        const { correo } = req.body;
+        const result = await authService.requestPasswordReset(correo);
+        res.json(result);
+    } catch (error) {
+        res.status(400).json({ message: error.message });
+    }
+};
+
+const resetPassword = async (req, res) => {
+    try {
+        const { token } = req.params;
+        const { contrasena } = req.body;
+        const result = await authService.resetPassword(token, contrasena);
+        res.json(result);
+    } catch (error) {
+        res.status(400).json({ message: error.message });
+    }
+};
+
 module.exports = {
     login,
-    register
+    register,
+    requestPasswordReset,
+    resetPassword
 };

@@ -15,7 +15,20 @@ const loginSchema = z.object({
     contrasena: z.string().min(1, 'La contraseña es requerida')
 });
 
+const forgotPasswordSchema = z.object({
+    correo: z.string().email('Ingresa un correo electrónico válido')
+});
+
+const resetPasswordSchema = z.object({
+    contrasena: z.string()
+        .min(8, 'La contraseña debe tener al menos 8 caracteres')
+        .regex(/[A-Z]/, 'La contraseña debe contener al menos una mayúscula')
+        .regex(/[0-9]/, 'La contraseña debe contener al menos un número')
+});
+
 module.exports = {
     registerSchema,
-    loginSchema
+    loginSchema,
+    forgotPasswordSchema,
+    resetPasswordSchema
 };

@@ -21,6 +21,14 @@ const Usuario = sequelize.define('Usuario', {
     rol: {
         type: DataTypes.ENUM('usuario', 'administrador'),
         defaultValue: 'usuario'
+    },
+    resetPasswordToken: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    resetPasswordExpires: {
+        type: DataTypes.DATE,
+        allowNull: true
     }
 }, {
     timestamps: true,
