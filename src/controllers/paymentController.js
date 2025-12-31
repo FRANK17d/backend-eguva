@@ -102,12 +102,10 @@ exports.processPayment = async (req, res) => {
             external_reference: pedido.id.toString(),
         };
 
-        // Solo enviar notification_url si es una URL pública válida (no localhost)
-        if (process.env.BACKEND_URL && !process.env.BACKEND_URL.includes('localhost')) {
-            body.notification_url = `${process.env.BACKEND_URL}/api/payments/webhook`;
+        const backendUrl = (process.env.BACKEND_URL || '').trim().replace(/\/$/, '');
+        if (backendUrl.startsWith('http') && !backendUrl.includes('localhost')) {
+            body.notification_url = `${backendUrl}/api/payments/webhook`;
         }
-
-        // Si es Yape, añadir campos específicos si son necesarios (Mercado Pago SDK los maneja por el token/payment_method_id)
 
         const response = await paymentClient.create({ body });
 
@@ -144,8 +142,13 @@ exports.processPayment = async (req, res) => {
 
     } catch (error) {
         console.error('Error al procesar pago con Checkout API:', error);
+
+        // Extraer mensaje detallado si existe en el error de Mercado Pago
+        const mpErrorDescription = error.cause?.[0]?.description || error.message || 'Error al procesar el pago';
+
         res.status(500).json({
             mensaje: 'Error al procesar el pago',
+            detalles: mpErrorDescription,
             error: error.message
         });
     }
