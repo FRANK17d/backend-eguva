@@ -11,6 +11,10 @@ const Pedido = sequelize.define('Pedido', {
         type: DataTypes.INTEGER,
         allowNull: false
     },
+    nombreCompleto: {
+        type: DataTypes.STRING,
+        allowNull: false
+    },
     total: {
         type: DataTypes.DECIMAL(10, 2),
         allowNull: false,
@@ -27,7 +31,7 @@ const Pedido = sequelize.define('Pedido', {
         defaultValue: 0.00
     },
     estado: {
-        type: DataTypes.ENUM('Pendiente', 'Pagado', 'Enviado', 'Entregado', 'Cancelado'),
+        type: DataTypes.ENUM('Pendiente', 'Pagado', 'Enviado', 'Entregado', 'Cancelado', 'Rechazado'),
         defaultValue: 'Pendiente'
     },
     metodoPago: {
@@ -37,10 +41,27 @@ const Pedido = sequelize.define('Pedido', {
     },
     direccionEnvio: {
         type: DataTypes.TEXT,
+        allowNull: true  // Opcional - el cliente recoge en agencia
+    },
+    departamento: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        defaultValue: 'La Libertad'
+    },
+    provincia: {
+        type: DataTypes.STRING,
         allowNull: false
     },
-    ciudad: {
+    distrito: {
         type: DataTypes.STRING,
+        allowNull: true
+    },
+    codigoPostal: {
+        type: DataTypes.STRING(10),
+        allowNull: true
+    },
+    dni: {
+        type: DataTypes.STRING(15),
         allowNull: false
     },
     telefono: {

@@ -5,7 +5,7 @@ const { sequelize } = require('../config/db');
 const crearPedido = async (req, res) => {
     const t = await sequelize.transaction();
     try {
-        const { items, direccionEnvio, ciudad, telefono, metodoPago, notas } = req.body;
+        const { items, nombreCompleto, dni, departamento, provincia, distrito, codigoPostal, telefono, metodoPago, notas } = req.body;
 
         if (!items || items.length === 0) {
             return res.status(400).json({ mensaje: 'No hay productos en el pedido' });
@@ -56,11 +56,15 @@ const crearPedido = async (req, res) => {
         // Crear el pedido
         const pedido = await Pedido.create({
             usuarioId: req.user.id,
-            subtotal, // Si quieres guardar también el subtotal podrías añadir el campo, pero Pedido.total es el final
+            nombreCompleto,
+            subtotal,
             total,
             costoEnvio,
-            direccionEnvio,
-            ciudad,
+            dni,
+            departamento,
+            provincia,
+            distrito,
+            codigoPostal,
             telefono,
             metodoPago,
             notas,
