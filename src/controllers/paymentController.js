@@ -155,22 +155,66 @@ exports.processPayment = async (req, res) => {
             status: response.status,
             status_detail: response.status_detail,
             id: response.id,
-            mensaje: response.status === 'rejected' ? 'El pago fue rechazado. Por favor, verifica los datos o intenta con otro medio.' : null
+            mensaje: response.status === 'rejected' ? obtenerMensajeRechazo(response.status_detail) : null
         });
 
     } catch (error) {
-        console.error('Error al procesar pago con Checkout API:', error);
-
         // Extraer mensaje detallado si existe en el error de Mercado Pago
-        const mpErrorDescription = error.cause?.[0]?.description || error.message || 'Error al procesar el pago';
+        const mpError = error.cause?.[0]?.description || error.message || '';
 
         res.status(500).json({
             mensaje: 'Error al procesar el pago',
-            detalles: mpErrorDescription,
-            error: error.message
+            detalles: obtenerMensajeError(mpError)
         });
     }
 };
+
+// Función para obtener mensaje amigable según el error
+function obtenerMensajeError(error) {
+    const errorLower = error.toLowerCase();
+    if (errorLower.includes('insufficient') || errorLower.includes('amount')) {
+        return 'Saldo insuficiente o monto inválido';
+    }
+    if (errorLower.includes('expired')) {
+        return 'El código ha expirado. Genera uno nuevo.';
+    }
+    if (errorLower.includes('invalid') && errorLower.includes('token')) {
+        return 'Token inválido. Intenta de nuevo.';
+    }
+    if (errorLower.includes('limit')) {
+        return 'El monto supera el límite permitido';
+    }
+    return 'Error al procesar el pago. Intenta de nuevo.';
+}
+
+// Función para mensaje de rechazo
+function obtenerMensajeRechazo(statusDetail) {
+    if (!statusDetail) return 'El pago fue rechazado';
+
+    const detail = statusDetail.toLowerCase();
+    if (detail.includes('insufficient_amount')) {
+        return 'Saldo insuficiente en tu cuenta';
+    }
+    if (detail.includes('cc_rejected_bad_filled')) {
+        return 'Datos de tarjeta incorrectos';
+    }
+    if (detail.includes('cc_rejected_high_risk')) {
+        return 'El pago fue rechazado por seguridad';
+    }
+    if (detail.includes('cc_rejected_blacklist')) {
+        return 'No se puede procesar este pago';
+    }
+    if (detail.includes('cc_rejected_call_for_authorize')) {
+        return 'Debes autorizar el pago con tu banco';
+    }
+    if (detail.includes('cc_rejected_card_disabled')) {
+        return 'Tu tarjeta está deshabilitada';
+    }
+    if (detail.includes('cc_rejected_max_attempts')) {
+        return 'Has superado el límite de intentos';
+    }
+    return 'El pago fue rechazado. Verifica los datos o intenta con otro medio.';
+}
 
 exports.webhook = async (req, res) => {
     // Aquí recibiremos la notificación de Mercado Pago cuando el pago se complete
