@@ -40,8 +40,9 @@ const connectDB = async () => {
         try { await sequelize.query("ALTER TABLE pedidos ADD COLUMN distrito VARCHAR(255);"); } catch (e) { }
         try { await sequelize.query("ALTER TABLE pedidos ADD COLUMN codigoPostal VARCHAR(10);"); } catch (e) { }
 
-        // Hacer direccionEnvio opcional (si existe la columna)
+        // Hacer direccionEnvio y ciudad opcionales (si existen las columnas)
         try { await sequelize.query("ALTER TABLE pedidos MODIFY COLUMN direccionEnvio TEXT NULL;"); } catch (e) { }
+        try { await sequelize.query("ALTER TABLE pedidos MODIFY COLUMN ciudad VARCHAR(255) NULL;"); } catch (e) { }
 
         // Actualizar ENUM de estado para incluir 'Rechazado'
         try { await sequelize.query("ALTER TABLE pedidos MODIFY COLUMN estado ENUM('Pendiente', 'Pagado', 'Enviado', 'Entregado', 'Cancelado', 'Rechazado') DEFAULT 'Pendiente';"); } catch (e) { }
