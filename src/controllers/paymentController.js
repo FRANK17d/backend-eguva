@@ -1,4 +1,5 @@
 const { MercadoPagoConfig, Preference } = require('mercadopago');
+const crypto = require('crypto');
 const { Pedido, DetallePedido, Producto } = require('../models');
 
 // Configuración de Mercado Pago
@@ -221,7 +222,48 @@ exports.webhook = async (req, res) => {
     res.sendStatus(200);
 
     try {
-        const { body, query } = req;
+        const { body, query, headers } = req;
+
+        // Verificar firma si tenemos la clave secreta configurada
+        const webhookSecret = process.env.MERCADOPAGO_WEBHOOK_SECRET;
+        if (webhookSecret) {
+            const xSignature = headers['x-signature'];
+            const xRequestId = headers['x-request-id'];
+
+            if (xSignature) {
+                // Extraer ts y hash del header x-signature
+                const parts = xSignature.split(',');
+                let ts = null;
+                let hash = null;
+
+                for (const part of parts) {
+                    const [key, value] = part.split('=');
+                    if (key && value) {
+                        if (key.trim() === 'ts') ts = value.trim();
+                        if (key.trim() === 'v1') hash = value.trim();
+                    }
+                }
+
+                if (ts && hash) {
+                    // Obtener data.id del query o body
+                    const dataId = query?.['data.id'] || body?.data?.id || '';
+
+                    // Generar el manifest
+                    const manifest = `id:${dataId};request-id:${xRequestId};ts:${ts};`;
+
+                    // Calcular HMAC
+                    const calculatedHash = crypto
+                        .createHmac('sha256', webhookSecret)
+                        .update(manifest)
+                        .digest('hex');
+
+                    // Si no coincide, no procesar
+                    if (calculatedHash !== hash) {
+                        return;
+                    }
+                }
+            }
+        }
 
         // El tipo puede venir en body.type o query.type
         const type = body?.type || query?.type || query?.topic;
