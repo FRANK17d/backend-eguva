@@ -1,5 +1,6 @@
 const { Pedido, DetallePedido, Producto, Usuario } = require('../models');
 const { sequelize } = require('../config/db');
+const { Op } = require('sequelize');
 
 // Crear un nuevo pedido
 const crearPedido = async (req, res) => {
@@ -91,19 +92,42 @@ const crearPedido = async (req, res) => {
 // Obtener pedidos del usuario autenticado
 const getMisPedidos = async (req, res) => {
     try {
-        const pedidos = await Pedido.findAll({
-            where: { usuarioId: req.user.id },
+        const pagina = parseInt(req.query.pagina) || 1;
+        const limite = parseInt(req.query.limite) || 5;
+        const offset = (pagina - 1) * limite;
+
+        const { estado } = req.query;
+        let whereClause = { usuarioId: req.user.id };
+
+        if (estado && estado !== 'Todos') {
+            whereClause.estado = estado;
+        } else {
+            whereClause.estado = { [Op.ne]: 'Pendiente' };
+        }
+
+        const { count, rows } = await Pedido.findAndCountAll({
+            where: whereClause,
             order: [['createdAt', 'DESC']],
+            limit: limite,
+            offset: offset,
             include: [
                 {
                     model: DetallePedido,
                     as: 'detalles',
                     include: [{ model: Producto, as: 'producto' }]
                 }
-            ]
+            ],
+            distinct: true
         });
-        res.json(pedidos);
+
+        res.json({
+            pedidos: rows,
+            total: count,
+            paginas: Math.ceil(count / limite),
+            paginaActual: pagina
+        });
     } catch (error) {
+        console.error('Error en getMisPedidos:', error);
         res.status(500).json({ mensaje: 'Error al obtener pedidos' });
     }
 };
