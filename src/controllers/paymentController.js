@@ -217,20 +217,74 @@ function obtenerMensajeRechazo(statusDetail) {
 }
 
 exports.webhook = async (req, res) => {
-    // Aquí recibiremos la notificación de Mercado Pago cuando el pago se complete
-    const { query } = req;
-    const topic = query.topic || query.type;
+    // Responder inmediatamente para evitar timeout
+    res.sendStatus(200);
 
     try {
-        if (topic === 'payment') {
-            const paymentId = query.id || query['data.id'];
-            // Aquí se debería consultar el estado del pago a Mercado Pago con el paymentId
-            // y actualizar el estado del pedido a 'Pagado'
-            console.log('Pago recibido:', paymentId);
+        const { body, query } = req;
+
+        // El tipo puede venir en body.type o query.type
+        const type = body?.type || query?.type || query?.topic;
+        const dataId = body?.data?.id || query?.['data.id'] || query?.id;
+
+        // Solo procesamos notificaciones de pago
+        if (type !== 'payment' || !dataId) {
+            return;
         }
-        res.sendStatus(200);
+
+        // Consultar el estado del pago a Mercado Pago
+        const { Payment } = require('mercadopago');
+        const paymentClient = new Payment(client);
+
+        const paymentInfo = await paymentClient.get({ id: dataId });
+
+        if (!paymentInfo) {
+            return;
+        }
+
+        // Obtener el pedido usando external_reference (que es el pedidoId)
+        const pedidoId = paymentInfo.external_reference;
+
+        if (!pedidoId) {
+            return;
+        }
+
+        const pedido = await Pedido.findByPk(pedidoId, {
+            include: [{
+                model: DetallePedido,
+                as: 'detalles'
+            }]
+        });
+
+        if (!pedido) {
+            return;
+        }
+
+        // Actualizar según el estado del pago
+        if (paymentInfo.status === 'approved' && pedido.estado !== 'Pagado') {
+            // Descontar stock
+            for (const detalle of pedido.detalles) {
+                const producto = await Producto.findByPk(detalle.productoId);
+                if (producto) {
+                    producto.stock = Math.max(0, producto.stock - detalle.cantidad);
+                    await producto.save();
+                }
+            }
+
+            pedido.estado = 'Pagado';
+            pedido.paymentId = dataId.toString();
+            await pedido.save();
+
+        } else if (paymentInfo.status === 'rejected') {
+            pedido.estado = 'Rechazado';
+            await pedido.save();
+
+        } else if (paymentInfo.status === 'in_process' || paymentInfo.status === 'pending') {
+            pedido.estado = 'Pendiente';
+            await pedido.save();
+        }
+
     } catch (error) {
-        console.error('Error en webhook de Mercado Pago:', error);
-        res.sendStatus(500);
+        // Solo logueamos el error, no afecta la respuesta ya enviada
     }
 };
