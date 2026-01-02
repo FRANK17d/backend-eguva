@@ -29,6 +29,8 @@ exports.createPreference = async (req, res) => {
         const items = pedido.detalles.map(item => ({
             id: item.producto.id.toString(),
             title: item.producto.nombre,
+            description: item.producto.descripcion?.substring(0, 256) || 'Ropa de segunda mano - Eguva',
+            category_id: 'fashion', // Categoría de moda/ropa
             quantity: item.cantidad,
             unit_price: parseFloat(item.precio),
             currency_id: 'PEN'
@@ -39,20 +41,41 @@ exports.createPreference = async (req, res) => {
             items.push({
                 id: 'shipping',
                 title: 'Costo de Envío',
+                description: 'Envío a nivel nacional por agencia',
+                category_id: 'services',
                 quantity: 1,
                 unit_price: parseFloat(pedido.costoEnvio),
                 currency_id: 'PEN'
             });
         }
 
+        // Separar nombre completo en first_name y last_name
+        const nombreCompleto = pedido.nombreCompleto || '';
+        const nombrePartes = nombreCompleto.trim().split(' ');
+        const firstName = nombrePartes[0] || 'Cliente';
+        const lastName = nombrePartes.slice(1).join(' ') || 'Eguva';
+
         const body = {
             items,
+            payer: {
+                name: firstName,
+                surname: lastName,
+                phone: {
+                    area_code: '51',
+                    number: pedido.telefono || ''
+                },
+                address: {
+                    zip_code: pedido.codigoPostal || '',
+                    street_name: pedido.direccionEnvio || `${pedido.distrito || ''}, ${pedido.provincia || ''}`
+                }
+            },
             back_urls: {
                 success: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/pago/exitoso`,
                 failure: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/pago/fallido`,
                 pending: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/pago/pendiente`,
             },
             auto_return: 'approved',
+            statement_descriptor: 'EGUVA', // Aparece en el resumen de tarjeta
             external_reference: `EGUVA-${pedido.id}`,
         };
 
@@ -84,7 +107,13 @@ exports.processPayment = async (req, res) => {
         const { Payment } = require('mercadopago');
         const paymentClient = new Payment(client);
 
-        const pedido = await Pedido.findByPk(pedidoId);
+        const pedido = await Pedido.findByPk(pedidoId, {
+            include: [{
+                model: DetallePedido,
+                as: 'detalles',
+                include: [{ model: Producto, as: 'producto' }]
+            }]
+        });
         if (!pedido) {
             return res.status(404).json({ mensaje: 'Pedido no encontrado' });
         }
@@ -102,6 +131,34 @@ exports.processPayment = async (req, res) => {
             });
         }
 
+        // Separar nombre completo en first_name y last_name
+        const nombreCompleto = pedido.nombreCompleto || '';
+        const nombrePartes = nombreCompleto.trim().split(' ');
+        const firstName = nombrePartes[0] || 'Cliente';
+        const lastName = nombrePartes.slice(1).join(' ') || 'Eguva';
+
+        // Construir items para additional_info
+        const items = pedido.detalles.map(detalle => ({
+            id: detalle.producto?.id?.toString() || detalle.productoId.toString(),
+            title: detalle.producto?.nombre || `Producto #${detalle.productoId}`,
+            description: detalle.producto?.descripcion?.substring(0, 256) || 'Ropa de segunda mano - Eguva',
+            category_id: 'fashion', // Categoría de moda/ropa
+            quantity: detalle.cantidad,
+            unit_price: parseFloat(detalle.precio)
+        }));
+
+        // Agregar costo de envío como item si existe
+        if (parseFloat(pedido.costoEnvio) > 0) {
+            items.push({
+                id: 'shipping',
+                title: 'Costo de Envío',
+                description: 'Envío a nivel nacional por agencia',
+                category_id: 'services',
+                quantity: 1,
+                unit_price: parseFloat(pedido.costoEnvio)
+            });
+        }
+
         const body = {
             transaction_amount: amount,
             token: payment.token,
@@ -111,8 +168,25 @@ exports.processPayment = async (req, res) => {
             payment_method_id: payment.payment_method_id,
             payer: {
                 email: payment.payer.email,
+                first_name: firstName,
+                last_name: lastName,
             },
             external_reference: `EGUVA-${pedido.id}`,
+            additional_info: {
+                items: items,
+                payer: {
+                    first_name: firstName,
+                    last_name: lastName,
+                    phone: {
+                        area_code: '51',
+                        number: pedido.telefono || ''
+                    },
+                    address: {
+                        zip_code: pedido.codigoPostal || '',
+                        street_name: pedido.direccionEnvio || `${pedido.distrito}, ${pedido.provincia}`,
+                    }
+                }
+            }
         };
 
         // Solo añadir issuer_id e identification si NO es Yape (Yape no los necesita)
@@ -125,6 +199,7 @@ exports.processPayment = async (req, res) => {
         if (backendUrl.startsWith('http') && !backendUrl.includes('localhost')) {
             body.notification_url = `${backendUrl}/api/payments/webhook`;
         }
+
 
         const response = await paymentClient.create({ body });
 
