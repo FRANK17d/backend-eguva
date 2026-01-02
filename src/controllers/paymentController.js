@@ -106,6 +106,7 @@ exports.processPayment = async (req, res) => {
             transaction_amount: amount,
             token: payment.token,
             description: `Pedido #${pedido.id} - Eguva`,
+            statement_descriptor: 'EGUVA', // Aparece en el resumen de tarjeta del cliente
             installments: payment.installments || 1,
             payment_method_id: payment.payment_method_id,
             payer: {
