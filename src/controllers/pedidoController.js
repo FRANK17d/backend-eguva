@@ -48,8 +48,8 @@ const crearPedido = async (req, res) => {
         const configMap = {};
         configs.forEach(c => configMap[c.clave] = parseFloat(c.valor));
 
-        const freeShippingThreshold = configMap['free_shipping_threshold'] || 70.00;
-        const baseShippingCost = configMap['shipping_cost'] || 15.00;
+        const freeShippingThreshold = configMap['free_shipping_threshold'] ?? 70.00;
+        const baseShippingCost = configMap['shipping_cost'] ?? 15.00;
 
         const costoEnvio = subtotal >= freeShippingThreshold ? 0 : baseShippingCost;
         const total = subtotal + costoEnvio;
