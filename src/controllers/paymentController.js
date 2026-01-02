@@ -53,7 +53,7 @@ exports.createPreference = async (req, res) => {
                 pending: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/pago/pendiente`,
             },
             auto_return: 'approved',
-            external_reference: pedido.id.toString(),
+            external_reference: `EGUVA-${pedido.id}`,
         };
 
         // Solo enviar notification_url si es una URL pública válida (no localhost)
@@ -112,7 +112,7 @@ exports.processPayment = async (req, res) => {
             payer: {
                 email: payment.payer.email,
             },
-            external_reference: pedido.id.toString(),
+            external_reference: `EGUVA-${pedido.id}`,
         };
 
         // Solo añadir issuer_id e identification si NO es Yape (Yape no los necesita)
@@ -285,12 +285,17 @@ exports.webhook = async (req, res) => {
             return;
         }
 
-        // Obtener el pedido usando external_reference (que es el pedidoId)
-        const pedidoId = paymentInfo.external_reference;
+        // Obtener el pedido usando external_reference (formato: EGUVA-{pedidoId})
+        const externalRef = paymentInfo.external_reference;
 
-        if (!pedidoId) {
+        if (!externalRef) {
             return;
         }
+
+        // Extraer el ID del pedido del formato "EGUVA-123"
+        const pedidoId = externalRef.startsWith('EGUVA-')
+            ? externalRef.replace('EGUVA-', '')
+            : externalRef;
 
         const pedido = await Pedido.findByPk(pedidoId, {
             include: [{
