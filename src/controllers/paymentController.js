@@ -1,6 +1,6 @@
 const { MercadoPagoConfig, Preference } = require('mercadopago');
 const crypto = require('crypto');
-const { Pedido, DetallePedido, Producto } = require('../models');
+const { Pedido, DetallePedido, Producto, Usuario } = require('../models');
 
 // Configuración de Mercado Pago
 // Deberás añadir MERCADOPAGO_ACCESS_TOKEN a tu .env
@@ -13,11 +13,18 @@ exports.createPreference = async (req, res) => {
         const { pedidoId } = req.body;
 
         const pedido = await Pedido.findByPk(pedidoId, {
-            include: [{
-                model: DetallePedido,
-                as: 'detalles',
-                include: [{ model: Producto, as: 'producto' }]
-            }]
+            include: [
+                {
+                    model: DetallePedido,
+                    as: 'detalles',
+                    include: [{ model: Producto, as: 'producto' }]
+                },
+                {
+                    model: Usuario,
+                    as: 'usuario',
+                    attributes: ['correo']
+                }
+            ]
         });
 
         if (!pedido) {
@@ -58,6 +65,7 @@ exports.createPreference = async (req, res) => {
         const body = {
             items,
             payer: {
+                email: pedido.usuario?.correo || '',
                 name: firstName,
                 surname: lastName,
                 phone: {
@@ -67,6 +75,10 @@ exports.createPreference = async (req, res) => {
                 address: {
                     zip_code: pedido.codigoPostal || '',
                     street_name: pedido.direccionEnvio || `${pedido.distrito || ''}, ${pedido.provincia || ''}`
+                },
+                identification: {
+                    type: 'DNI',
+                    number: pedido.dni || ''
                 }
             },
             back_urls: {
@@ -109,11 +121,18 @@ exports.processPayment = async (req, res) => {
         const paymentClient = new Payment(client);
 
         const pedido = await Pedido.findByPk(pedidoId, {
-            include: [{
-                model: DetallePedido,
-                as: 'detalles',
-                include: [{ model: Producto, as: 'producto' }]
-            }]
+            include: [
+                {
+                    model: DetallePedido,
+                    as: 'detalles',
+                    include: [{ model: Producto, as: 'producto' }]
+                },
+                {
+                    model: Usuario,
+                    as: 'usuario',
+                    attributes: ['correo']
+                }
+            ]
         });
         if (!pedido) {
             return res.status(404).json({ mensaje: 'Pedido no encontrado' });
@@ -174,6 +193,8 @@ exports.processPayment = async (req, res) => {
                 last_name: lastName,
             },
             external_reference: `EGUVA-${pedido.id}`,
+            // Device ID para prevención de fraude (viene del SDK de frontend)
+            ...(payment.device_id && { device_id: payment.device_id }),
             additional_info: {
                 items: items,
                 payer: {
