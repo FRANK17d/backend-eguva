@@ -75,6 +75,7 @@ exports.createPreference = async (req, res) => {
                 pending: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/pago/pendiente`,
             },
             auto_return: 'approved',
+            binary_mode: true,
             statement_descriptor: 'EGUVA', // Aparece en el resumen de tarjeta
             external_reference: `EGUVA-${pedido.id}`,
         };
@@ -166,6 +167,7 @@ exports.processPayment = async (req, res) => {
             statement_descriptor: 'EGUVA', // Aparece en el resumen de tarjeta del cliente
             installments: payment.installments || 1,
             payment_method_id: payment.payment_method_id,
+            binary_mode: true,
             payer: {
                 email: payment.payer.email,
                 first_name: firstName,
